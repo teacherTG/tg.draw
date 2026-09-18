@@ -1,0 +1,730 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>빅발리볼 대진표 자동 생성기</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap');
+        body {
+            font-family: 'Noto Sans KR', sans-serif;
+            background-color: #f3f4f6; /* bg-gray-100 */
+        }
+        /* Custom Checkbox Style for better mobile touch */
+        .class-checkbox:checked + label {
+            background-color: #3b82f6; /* bg-blue-500 */
+            color: white;
+            border-color: #3b82f6;
+        }
+    </style>
+</head>
+<body class="text-gray-800 antialiased min-h-screen">
+
+    <div id="app" class="max-w-md mx-auto bg-white min-h-screen shadow-lg flex flex-col relative overflow-hidden">
+        
+        <!-- Header -->
+        <header class="bg-indigo-600 text-white p-4 text-center shadow-md">
+            <h1 class="text-2xl font-black tracking-tight">🏐 빅발리볼 대진표</h1>
+            <p class="text-indigo-200 text-sm mt-1 font-medium">(15점 단판)</p>
+        </header>
+
+        <main id="setup-view" class="flex-1 p-5 flex flex-col">
+            <div class="mb-6">
+                <h2 class="text-xl font-bold mb-2 text-gray-800">✅ 참여 학급 선택</h2>
+                <p class="text-gray-500 text-sm mb-4">오늘 수업에 참여하는 반을 모두 선택해주세요. (최소 2개 반)</p>
+                
+                <div class="grid grid-cols-3 gap-3" id="class-selection-container">
+                    <!-- Checkboxes will be injected here by JS -->
+                </div>
+            </div>
+            
+            <div class="mt-auto">
+                <div id="setup-error" class="text-red-500 text-sm font-bold mb-2 text-center hidden">최소 2개 이상의 반을 선택해야 합니다.</div>
+                <button id="start-btn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-xl shadow-lg transition transform active:scale-95 text-lg">
+                    대진표 생성 시작 🚀
+                </button>
+            </div>
+        </main>
+
+        <main id="main-view" class="flex-1 p-4 flex flex-col hidden overflow-y-auto bg-gray-100">
+            
+            <!-- Global Controls -->
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-black text-indigo-800 tracking-tight">🏐 코트별 경기 현황</h2>
+                <div class="flex gap-1.5 sm:gap-2">
+                    <button id="view-overall-btn" class="text-xs bg-teal-600 hover:bg-teal-700 text-white py-2 px-2 sm:px-3 rounded-lg font-bold shadow transition active:scale-95">
+                        전체 대진표 📋
+                    </button>
+                    <button id="fill-all-btn" class="text-xs bg-indigo-600 hover:bg-indigo-700 text-white py-2 px-2 sm:px-3 rounded-lg font-bold shadow transition active:scale-95">
+                        전체 대진짜기 ⚡
+                    </button>
+                    <button id="reset-btn" class="text-xs bg-gray-300 hover:bg-gray-400 text-gray-800 py-2 px-2 sm:px-3 rounded-lg font-bold shadow transition active:scale-95">
+                        초기화 🔄
+                    </button>
+                </div>
+            </div>
+
+            <!-- Courts Container -->
+            <div id="courts-container" class="grid grid-cols-1 gap-4 mb-6">
+                <!-- Courts injected here -->
+            </div>
+
+            <!-- Resting Teams -->
+            <div class="bg-white border border-gray-200 rounded-xl p-4 mb-6 shadow-sm">
+                <h3 class="text-sm font-bold text-gray-700 mb-2 flex items-center">
+                    <svg class="w-4 h-4 mr-1 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                    대기 중인 팀 (다음 경기 준비)
+                </h3>
+                <p id="resting-teams" class="text-sm text-gray-600 leading-relaxed break-keep">
+                    <!-- Resting teams text -->
+                </p>
+            </div>
+
+            <!-- Stats -->
+            <div class="mt-auto border-t border-gray-300 pt-6 pb-4">
+                <h3 class="text-lg font-bold text-gray-800 mb-3 text-center">📊 누적 경기 현황판</h3>
+                <div class="overflow-x-auto rounded-lg border border-gray-200 shadow-sm bg-white">
+                    <table class="w-full text-center text-sm">
+                        <thead class="bg-gray-50 text-gray-600 border-b border-gray-200">
+                            <tr>
+                                <th class="py-2 px-1 font-semibold border-r">반</th>
+                                <th class="py-2 px-1 font-semibold border-r text-blue-700">남A</th>
+                                <th class="py-2 px-1 font-semibold border-r text-blue-700">남B</th>
+                                <th class="py-2 px-1 font-semibold border-r text-pink-700">여A</th>
+                                <th class="py-2 px-1 font-semibold text-pink-700">여B</th>
+                            </tr>
+                        </thead>
+                        <tbody id="stats-body" class="divide-y divide-gray-100">
+                            <!-- Stats rows will be injected here -->
+                        </tbody>
+                    </table>
+                    <div class="text-[10px] text-gray-400 text-center py-2 bg-gray-50">* 초록색 점(<span class="inline-block w-1.5 h-1.5 rounded-full bg-green-500 mx-0.5"></span>)은 현재 경기 중인 팀을 의미합니다.</div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Modal (for reset confirmation) -->
+        <div id="reset-modal" class="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
+            <div class="bg-white p-6 rounded-2xl w-10/12 max-w-sm shadow-2xl">
+                <h3 class="text-xl font-bold text-gray-900 mb-2">초기화 하시겠습니까?</h3>
+                <p class="text-gray-600 mb-6 text-sm">모든 경기 기록과 라운드 정보가 사라집니다. 이 작업은 되돌릴 수 없습니다.</p>
+                <div class="flex space-x-3">
+                    <button id="cancel-reset-btn" class="flex-1 bg-gray-200 text-gray-800 py-3 rounded-xl font-bold">취소</button>
+                    <button id="confirm-reset-btn" class="flex-1 bg-red-500 text-white py-3 rounded-xl font-bold">초기화</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 전체 대진표 Modal -->
+        <div id="overall-modal" class="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center hidden z-50 p-4">
+            <div class="bg-white rounded-2xl w-full max-w-lg shadow-2xl flex flex-col max-h-[90vh]">
+                <div class="p-4 border-b border-gray-200 flex justify-between items-center bg-gray-50 rounded-t-2xl">
+                    <h3 class="text-lg font-black text-gray-900">📋 전체 대진표 현황</h3>
+                    <button id="close-overall-btn" class="text-gray-400 hover:text-gray-700 p-1">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                    </button>
+                </div>
+                <div id="overall-modal-body" class="p-4 overflow-y-auto flex-1 bg-gray-100">
+                    <!-- Content injected here -->
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            
+            // --- State ---
+            let selectedClasses = [];
+            let teams = []; // status: 'waiting'|'playing'|'scheduled'
+            let matchHistory = [];
+            let completedMatches = []; // 전체 대진표 기록용
+            let globalTick = 0;
+
+            let courts = [
+                { id: 'M1', title: '남자 1코트', gender: 'M', theme: 'blue', match: null, upcoming: null },
+                { id: 'M2', title: '남자 2코트', gender: 'M', theme: 'blue', match: null, upcoming: null },
+                { id: 'F1', title: '여자 1코트', gender: 'F', theme: 'pink', match: null, upcoming: null },
+                { id: 'F2', title: '여자 2코트', gender: 'F', theme: 'pink', match: null, upcoming: null }
+            ];
+
+            // --- DOM Elements ---
+            const setupView = document.getElementById('setup-view');
+            const mainView = document.getElementById('main-view');
+            const classContainer = document.getElementById('class-selection-container');
+            const startBtn = document.getElementById('start-btn');
+            const setupError = document.getElementById('setup-error');
+            
+            const courtsContainer = document.getElementById('courts-container');
+            const restingTeamsEl = document.getElementById('resting-teams');
+            const fillAllBtn = document.getElementById('fill-all-btn');
+            const statsBody = document.getElementById('stats-body');
+            
+            const resetBtn = document.getElementById('reset-btn');
+            const resetModal = document.getElementById('reset-modal');
+            const cancelResetBtn = document.getElementById('cancel-reset-btn');
+            const confirmResetBtn = document.getElementById('confirm-reset-btn');
+
+            const overallModal = document.getElementById('overall-modal');
+            const closeOverallBtn = document.getElementById('close-overall-btn');
+            const viewOverallBtn = document.getElementById('view-overall-btn');
+
+            // --- Initialization ---
+            function initSetup() {
+                classContainer.innerHTML = '';
+                for (let i = 1; i <= 12; i++) {
+                    const div = document.createElement('div');
+                    div.className = 'relative';
+                    div.innerHTML = `
+                        <input type="checkbox" id="class-${i}" value="${i}" class="class-checkbox hidden peer">
+                        <label for="class-${i}" class="flex items-center justify-center w-full h-12 border-2 border-gray-300 rounded-xl text-gray-600 font-bold cursor-pointer transition-colors peer-checked:bg-blue-500 peer-checked:text-white peer-checked:border-blue-500 select-none">
+                            ${i}반
+                        </label>
+                    `;
+                    classContainer.appendChild(div);
+                }
+            }
+
+            initSetup();
+
+            // --- Event Listeners ---
+            startBtn.addEventListener('click', () => {
+                const checkedBoxes = document.querySelectorAll('.class-checkbox:checked');
+                if (checkedBoxes.length < 2) {
+                    setupError.classList.remove('hidden');
+                    return;
+                }
+                setupError.classList.add('hidden');
+                
+                selectedClasses = Array.from(checkedBoxes).map(cb => parseInt(cb.value));
+                initializeTeams();
+                
+                setupView.classList.add('hidden');
+                mainView.classList.remove('hidden');
+                
+                renderCourts();
+                renderRestingTeams();
+                updateStatsTable();
+            });
+
+            viewOverallBtn.addEventListener('click', () => {
+                renderOverallModal();
+                overallModal.classList.remove('hidden');
+            });
+
+            closeOverallBtn.addEventListener('click', () => {
+                overallModal.classList.add('hidden');
+            });
+
+            fillAllBtn.addEventListener('click', () => {
+                let matchesCreated = false;
+                
+                // 1. 대기 중인 예정 경기가 있고 현재 비어있으면 바로 시작
+                courts.forEach(court => {
+                    if (!court.match && court.upcoming) {
+                        promoteUpcomingToMatch(court.id);
+                        matchesCreated = true;
+                    }
+                });
+
+                // 2. 비어있는 코트 새 대진 배정
+                courts.forEach(court => {
+                    if (!court.match) {
+                        const created = createMatchForCourt(court.id, false, false);
+                        if (created) matchesCreated = true;
+                    }
+                });
+
+                // 3. 모든 코트에 '다음 경기(예정)' 미리 채우기
+                courts.forEach(court => {
+                    if (!court.upcoming) {
+                        const created = createMatchForCourt(court.id, true, false);
+                        if (created) matchesCreated = true;
+                    }
+                });
+
+                if (matchesCreated) {
+                    renderCourts();
+                    renderRestingTeams();
+                    updateStatsTable();
+                } else {
+                    alert("대기 중인 팀이 부족하여 더 이상 배정하거나 예정할 수 없습니다.");
+                }
+            });
+
+            resetBtn.addEventListener('click', () => {
+                resetModal.classList.remove('hidden');
+            });
+
+            cancelResetBtn.addEventListener('click', () => {
+                resetModal.classList.add('hidden');
+            });
+
+            confirmResetBtn.addEventListener('click', () => {
+                // Reset state
+                selectedClasses = [];
+                teams = [];
+                matchHistory = [];
+                completedMatches = [];
+                globalTick = 0;
+                courts.forEach(c => { c.match = null; c.upcoming = null; });
+                
+                // Uncheck all boxes
+                document.querySelectorAll('.class-checkbox').forEach(cb => cb.checked = false);
+                setupError.classList.add('hidden');
+                
+                resetModal.classList.add('hidden');
+                mainView.classList.add('hidden');
+                setupView.classList.remove('hidden');
+            });
+
+            // Handle dynamically generated court buttons
+            courtsContainer.addEventListener('click', (e) => {
+                const createBtn = e.target.closest('.create-match-btn');
+                const endBtn = e.target.closest('.end-match-btn');
+                const scheduleBtn = e.target.closest('.schedule-match-btn');
+                const startUpcomingBtn = e.target.closest('.start-upcoming-btn');
+                const cancelUpcomingBtn = e.target.closest('.cancel-upcoming-btn');
+
+                let changed = false;
+
+                if (createBtn) {
+                    changed = createMatchForCourt(createBtn.dataset.courtId, false, true);
+                } else if (scheduleBtn) {
+                    changed = createMatchForCourt(scheduleBtn.dataset.courtId, true, true);
+                } else if (startUpcomingBtn) {
+                    changed = promoteUpcomingToMatch(startUpcomingBtn.dataset.courtId);
+                } else if (cancelUpcomingBtn) {
+                    changed = cancelUpcomingForCourt(cancelUpcomingBtn.dataset.courtId);
+                } else if (endBtn) {
+                    endMatchForCourt(endBtn.dataset.courtId);
+                    changed = true;
+                }
+
+                if (changed) {
+                    renderCourts();
+                    renderRestingTeams();
+                    updateStatsTable();
+                }
+            });
+
+            // --- Core Logic ---
+
+            function initializeTeams() {
+                teams = [];
+                selectedClasses.forEach(cls => {
+                    teams.push({ id: `${cls}-남A`, classId: cls, type: '남A', gender: 'M', playCount: 0, lastPlayed: -999, status: 'waiting' });
+                    teams.push({ id: `${cls}-남B`, classId: cls, type: '남B', gender: 'M', playCount: 0, lastPlayed: -999, status: 'waiting' });
+                    teams.push({ id: `${cls}-여A`, classId: cls, type: '여A', gender: 'F', playCount: 0, lastPlayed: -999, status: 'waiting' });
+                    teams.push({ id: `${cls}-여B`, classId: cls, type: '여B', gender: 'F', playCount: 0, lastPlayed: -999, status: 'waiting' });
+                });
+            }
+
+            function createMatchForCourt(courtId, isUpcoming = false, showWarning = true) {
+                const court = courts.find(c => c.id === courtId);
+                if (!court) return false;
+                
+                // 중복 생성 방지
+                if (isUpcoming && court.upcoming) return false;
+                if (!isUpcoming && court.match) return false;
+
+                const bestPair = findBestPairForCourt(court.gender);
+                
+                if (!bestPair) {
+                    if(showWarning) alert(`대기 중인 ${court.gender === 'M' ? '남자' : '여자'} 팀이 부족합니다. 다른 경기가 종료되어야 합니다.`);
+                    return false;
+                }
+
+                // Update state
+                const [tA, tB] = bestPair;
+                
+                if (isUpcoming) {
+                    tA.status = 'scheduled';
+                    tB.status = 'scheduled';
+                    court.upcoming = [tA, tB];
+                } else {
+                    tA.status = 'playing';
+                    tB.status = 'playing';
+                    tA.playCount++;
+                    tB.playCount++;
+                    court.match = [tA, tB];
+                    matchHistory.push(getMatchId(tA, tB));
+                }
+
+                return true;
+            }
+
+            function promoteUpcomingToMatch(courtId) {
+                const court = courts.find(c => c.id === courtId);
+                if (!court || !court.upcoming || court.match) return false;
+
+                const [tA, tB] = court.upcoming;
+                tA.status = 'playing';
+                tB.status = 'playing';
+                tA.playCount++;
+                tB.playCount++;
+                
+                court.match = [tA, tB];
+                court.upcoming = null;
+                matchHistory.push(getMatchId(tA, tB));
+                return true;
+            }
+
+            function cancelUpcomingForCourt(courtId) {
+                const court = courts.find(c => c.id === courtId);
+                if (!court || !court.upcoming) return false;
+
+                const [tA, tB] = court.upcoming;
+                const realTa = teams.find(t => t.id === tA.id);
+                const realTb = teams.find(t => t.id === tB.id);
+                
+                if (realTa) realTa.status = 'waiting';
+                if (realTb) realTb.status = 'waiting';
+                
+                court.upcoming = null;
+                return true;
+            }
+
+            function endMatchForCourt(courtId) {
+                const court = courts.find(c => c.id === courtId);
+                if (!court || !court.match) return;
+
+                globalTick++;
+
+                const [tA, tB] = court.match;
+                
+                // 기록 저장 (전체 대진보기용)
+                completedMatches.push({
+                    courtId: court.id,
+                    courtTitle: court.title,
+                    tA: { ...tA },
+                    tB: { ...tB }
+                });
+                
+                // Update teams in global array
+                const realTa = teams.find(t => t.id === tA.id);
+                const realTb = teams.find(t => t.id === tB.id);
+                
+                if (realTa) {
+                    realTa.status = 'waiting';
+                    realTa.lastPlayed = globalTick; // 방금 경기를 마쳤음을 기록
+                }
+                if (realTb) {
+                    realTb.status = 'waiting';
+                    realTb.lastPlayed = globalTick; // 방금 경기를 마쳤음을 기록
+                }
+
+                court.match = null;
+                // UI 갱신은 호출한 곳에서 처리
+            }
+
+            function getMatchId(teamA, teamB) {
+                const ids = [teamA.id, teamB.id].sort();
+                return `${ids[0]}_vs_${ids[1]}`;
+            }
+
+            function findBestPairForCourt(gender) {
+                const availableTeams = teams.filter(t => t.gender === gender && t.status === 'waiting');
+                if (availableTeams.length < 2) return null;
+
+                let bestPair = null;
+                let lowestScore = Infinity;
+
+                // 같은 성별의 다른 코트에서 뛰고 있거나 '예정'된 반을 파악하여 특정 반의 독점 방지
+                const activeClasses = new Set();
+                courts.filter(c => c.gender === gender).forEach(c => {
+                    if (c.match) {
+                        activeClasses.add(c.match[0].classId);
+                        activeClasses.add(c.match[1].classId);
+                    }
+                    if (c.upcoming) {
+                        activeClasses.add(c.upcoming[0].classId);
+                        activeClasses.add(c.upcoming[1].classId);
+                    }
+                });
+
+                // 대기 중인 팀들로 만들 수 있는 모든 1:1 매치 조합 검사
+                for (let i = 0; i < availableTeams.length; i++) {
+                    for (let j = i + 1; j < availableTeams.length; j++) {
+                        const tA = availableTeams[i];
+                        const tB = availableTeams[j];
+                        
+                        let score = 0;
+
+                        // 1. 경기 횟수 (가장 중요): 뛴 횟수가 적은 팀들의 조합 우선
+                        score += (tA.playCount + tB.playCount) * 100000;
+
+                        // 2. 같은 반 매칭 금지: 절대 만나지 않도록 거대한 페널티
+                        if (tA.classId === tB.classId) score += 10000000;
+
+                        // 3. 중복 대진 방지: 전에 붙었던 팀들끼리 또 붙지 않게 페널티
+                        const matchId = getMatchId(tA, tB);
+                        if (matchHistory.includes(matchId)) score += 500000;
+
+                        // 4. 연속 출전 방지: 방금 막 경기를 끝낸 팀이 바로 다시 불려가지 않도록 페널티
+                        const aRest = globalTick - tA.lastPlayed;
+                        const bRest = globalTick - tB.lastPlayed;
+                        
+                        // rest가 0이면 방금 종료 버튼을 누르자마자 발생한 경우 (가장 큰 연속 페널티)
+                        if (aRest === 0) score += 80000;
+                        if (bRest === 0) score += 80000;
+                        // rest가 1이면 한 턴 쉬었음
+                        if (aRest === 1) score += 10000;
+                        if (bRest === 1) score += 10000;
+
+                        // 5. 코트 독점 방지: 다른 코트에서 뛰고 있는 반이 또 배정되는 것을 지양
+                        if (activeClasses.has(tA.classId)) score += 20000;
+                        if (activeClasses.has(tB.classId)) score += 20000;
+
+                        // 동점일 경우 섞어주기 위한 랜덤 값
+                        score += Math.random() * 10;
+
+                        if (score < lowestScore) {
+                            lowestScore = score;
+                            bestPair = [tA, tB];
+                        }
+                    }
+                }
+
+                return bestPair;
+            }
+
+            function renderCourts() {
+                courtsContainer.innerHTML = '';
+                
+                courts.forEach(court => {
+                    const isBlue = court.theme === 'blue';
+                    const themeColors = {
+                        bg: isBlue ? 'bg-blue-50' : 'bg-pink-50',
+                        border: isBlue ? 'border-blue-200' : 'border-pink-200',
+                        text: isBlue ? 'text-blue-700' : 'text-pink-700',
+                        btn: isBlue ? 'bg-blue-600 hover:bg-blue-700' : 'bg-pink-600 hover:bg-pink-700',
+                        badge: isBlue ? 'bg-blue-100 text-blue-800' : 'bg-pink-100 text-pink-800'
+                    };
+
+                    let contentHtml = '';
+
+                    // 1. Current Match Area
+                    if (court.match) {
+                        const [tA, tB] = court.match;
+                        contentHtml += `
+                            <div class="flex-1 flex flex-col items-center justify-center p-3">
+                                <div class="flex items-center justify-between w-full px-1 mb-2">
+                                    <div class="text-center flex-1">
+                                        <div class="text-2xl sm:text-3xl font-black text-gray-900 tracking-tight flex items-center justify-center gap-1.5 flex-wrap">
+                                            <span>${tA.classId}반</span> <span class="${themeColors.text} text-xl sm:text-2xl">${tA.type}</span>
+                                        </div>
+                                    </div>
+                                    <div class="px-2">
+                                        <div class="bg-gray-800 text-white text-[10px] sm:text-xs font-black px-2 py-1 rounded-sm shadow-inner italic">VS</div>
+                                    </div>
+                                    <div class="text-center flex-1">
+                                        <div class="text-2xl sm:text-3xl font-black text-gray-900 tracking-tight flex items-center justify-center gap-1.5 flex-wrap">
+                                            <span>${tB.classId}반</span> <span class="${themeColors.text} text-xl sm:text-2xl">${tB.type}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <button data-court-id="${court.id}" class="end-match-btn mt-3 w-full bg-gray-800 hover:bg-gray-900 text-white text-sm font-bold py-3 rounded-xl shadow transition transform active:scale-95 flex items-center justify-center">
+                                    현재 경기 종료 🏁
+                                </button>
+                            </div>
+                        `;
+                    } else if (court.upcoming) {
+                        const [tA, tB] = court.upcoming;
+                        contentHtml += `
+                            <div class="flex-1 flex flex-col items-center justify-center p-4">
+                                <span class="text-gray-500 font-bold mb-2 text-sm flex items-center"><svg class="w-4 h-4 mr-1 text-yellow-500" fill="currentColor" viewBox="0 0 20 20"><path d="M10 2a8 8 0 100 16 8 8 0 000-16zm1 12H9v-2h2v2zm0-4H9V6h2v4z"></path></svg>다음 경기가 대기 중입니다</span>
+                                <div class="text-xl font-black text-gray-800 mb-4 flex items-center gap-2">
+                                    ${tA.classId}반 <span class="${themeColors.text} text-lg">${tA.type}</span> <span class="text-sm font-normal text-gray-400 mx-1">vs</span> ${tB.classId}반 <span class="${themeColors.text} text-lg">${tB.type}</span>
+                                </div>
+                                <button data-court-id="${court.id}" class="start-upcoming-btn w-full ${themeColors.btn} text-white text-sm font-bold py-3 rounded-xl shadow-md transition transform active:scale-95 flex items-center justify-center">
+                                    예정된 경기 시작 🚀
+                                </button>
+                            </div>
+                        `;
+                    } else {
+                        contentHtml += `
+                            <div class="flex-1 flex flex-col items-center justify-center p-6 m-2 bg-white bg-opacity-60 rounded-xl border border-dashed ${themeColors.border}">
+                                <span class="text-gray-400 text-sm font-medium mb-3">코트가 비어있습니다</span>
+                                <button data-court-id="${court.id}" class="create-match-btn ${themeColors.btn} text-white px-5 py-2.5 rounded-xl font-bold text-sm shadow-md transition transform active:scale-95">
+                                    새 대진 짜기 🎲
+                                </button>
+                            </div>
+                        `;
+                    }
+
+                    // 2. Upcoming Match Section (Only show if there is a current match)
+                    if (court.match) {
+                        if (court.upcoming) {
+                            const [uA, uB] = court.upcoming;
+                            contentHtml += `
+                                <div class="bg-gray-50 border-t ${themeColors.border} p-3 px-4 flex justify-between items-center">
+                                    <div class="text-sm font-bold text-gray-700 flex items-center flex-wrap gap-1">
+                                        <span class="bg-yellow-200 text-yellow-800 px-1.5 py-0.5 rounded mr-1.5 text-[10px]">예정</span>
+                                        ${uA.classId}반 <span class="${themeColors.text} text-xs">${uA.type}</span> <span class="text-gray-400 font-normal text-xs mx-0.5">vs</span> ${uB.classId}반 <span class="${themeColors.text} text-xs">${uB.type}</span>
+                                    </div>
+                                    <button data-court-id="${court.id}" class="cancel-upcoming-btn text-[11px] text-red-500 hover:text-red-700 font-bold bg-white border border-red-200 px-2.5 py-1.5 rounded-lg shadow-sm transition active:scale-95 ml-2 shrink-0">
+                                        취소
+                                    </button>
+                                </div>
+                            `;
+                        } else {
+                            contentHtml += `
+                                <div class="bg-white border-t ${themeColors.border} p-2 flex justify-center">
+                                    <button data-court-id="${court.id}" class="schedule-match-btn text-xs ${themeColors.text} font-bold hover:bg-${isBlue?'blue':'pink'}-50 py-1.5 px-4 rounded-lg flex items-center transition">
+                                        + 다음 경기 미리 짜기 📅
+                                    </button>
+                                </div>
+                            `;
+                        }
+                    }
+
+                    const courtHtml = `
+                        <div class="${themeColors.bg} border ${themeColors.border} rounded-2xl shadow-sm overflow-hidden flex flex-col min-h-[170px]">
+                            <div class="${themeColors.badge} px-4 py-2 font-black text-sm border-b ${themeColors.border} flex justify-between items-center">
+                                <span>${court.title}</span>
+                                ${court.match ? '<span class="flex h-3 w-3"><span class="animate-ping absolute inline-flex h-3 w-3 rounded-full bg-red-400 opacity-75"></span><span class="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span></span>' : ''}
+                            </div>
+                            ${contentHtml}
+                        </div>
+                    `;
+                    
+                    courtsContainer.insertAdjacentHTML('beforeend', courtHtml);
+                });
+            }
+
+            function renderOverallModal() {
+                const modalBody = document.getElementById('overall-modal-body');
+                modalBody.innerHTML = '';
+
+                courts.forEach(court => {
+                    const isBlue = court.theme === 'blue';
+                    const themeText = isBlue ? 'text-blue-700' : 'text-pink-700';
+                    const themeBorder = isBlue ? 'border-blue-200' : 'border-pink-200';
+                    const themeBg = isBlue ? 'bg-blue-50' : 'bg-pink-50';
+
+                    const courtMatches = completedMatches.filter(m => m.courtId === court.id);
+
+                    let html = `
+                        <div class="mb-5 border ${themeBorder} rounded-xl overflow-hidden shadow-sm">
+                            <div class="${themeBg} font-black text-sm px-3 py-2.5 border-b ${themeBorder} ${themeText}">
+                                ${court.title}
+                            </div>
+                            <ul class="divide-y divide-gray-100 text-sm bg-white">
+                    `;
+
+                    if (courtMatches.length === 0 && !court.match && !court.upcoming) {
+                        html += `<li class="px-4 py-3 text-gray-400 text-center italic text-xs">배정된 경기가 없습니다.</li>`;
+                    }
+
+                    // 1. History (완료된 경기)
+                    courtMatches.forEach((m) => {
+                        html += `<li class="px-4 py-2.5 text-gray-400 line-through decoration-gray-300 flex items-center">
+                            <span class="text-[10px] bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded mr-3 shrink-0">종료</span>
+                            ${m.tA.classId}반 ${m.tA.type} <span class="mx-2 text-gray-300">vs</span> ${m.tB.classId}반 ${m.tB.type}
+                        </li>`;
+                    });
+
+                    // 2. Current (현재 경기)
+                    if (court.match) {
+                        const [tA, tB] = court.match;
+                        html += `<li class="px-4 py-3 font-bold text-gray-900 bg-green-50 flex items-center">
+                            <span class="relative flex h-2.5 w-2.5 mr-3 shrink-0">
+                                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                                <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-green-500"></span>
+                            </span>
+                            ${tA.classId}반 <span class="${themeText} ml-1">${tA.type}</span> <span class="mx-2 text-gray-400 font-normal text-xs">vs</span> ${tB.classId}반 <span class="${themeText} ml-1">${tB.type}</span>
+                        </li>`;
+                    }
+
+                    // 3. Upcoming (예정 경기)
+                    if (court.upcoming) {
+                        const [tA, tB] = court.upcoming;
+                        html += `<li class="px-4 py-3 font-medium text-gray-700 border-l-4 border-yellow-400 border-dashed bg-yellow-50/30 flex items-center">
+                            <span class="text-[10px] bg-yellow-200 text-yellow-800 font-bold px-1.5 py-0.5 rounded mr-3 shrink-0">예정</span>
+                            ${tA.classId}반 <span class="${themeText} ml-1">${tA.type}</span> <span class="mx-2 text-gray-400 font-normal text-xs">vs</span> ${tB.classId}반 <span class="${themeText} ml-1">${tB.type}</span>
+                        </li>`;
+                    }
+
+                    html += `</ul></div>`;
+                    modalBody.insertAdjacentHTML('beforeend', html);
+                });
+            }
+
+            function renderRestingTeams() {
+                const waitingTeams = teams.filter(t => t.status === 'waiting');
+                
+                if (waitingTeams.length === 0) {
+                    restingTeamsEl.innerHTML = "<span class='text-gray-400 font-medium'>모든 팀이 경기 중입니다.</span>";
+                    return;
+                }
+
+                // 학급별로 그룹화하여 표시
+                const waitingByClass = {};
+                waitingTeams.forEach(t => {
+                    if (!waitingByClass[t.classId]) waitingByClass[t.classId] = [];
+                    waitingByClass[t.classId].push(t.type);
+                });
+
+                let restingText = [];
+                for (const classId in waitingByClass) {
+                    restingText.push(`
+                        <span class="inline-block bg-gray-100 border border-gray-200 rounded px-2 py-1 m-1 shadow-sm">
+                            <span class="font-black text-gray-800">${classId}반:</span> 
+                            <span class="text-gray-600 text-xs font-bold">${waitingByClass[classId].join(', ')}</span>
+                        </span>
+                    `);
+                }
+
+                restingTeamsEl.innerHTML = restingText.join('');
+            }
+
+            function updateStatsTable() {
+                statsBody.innerHTML = '';
+                
+                selectedClasses.forEach(classId => {
+                    const cTeams = teams.filter(t => t.classId === classId);
+                    
+                    const mATeam = cTeams.find(t => t.type === '남A');
+                    const mBTeam = cTeams.find(t => t.type === '남B');
+                    const fATeam = cTeams.find(t => t.type === '여A');
+                    const fBTeam = cTeams.find(t => t.type === '여B');
+
+                    const getCountHtml = (team) => {
+                        if(!team) return '-';
+                        const minPlays = Math.min(...teams.map(t => t.playCount));
+                        const isMin = team.playCount === minPlays;
+                        
+                        let badgeClass = 'text-gray-600';
+                        if (isMin && team.playCount > 0) {
+                            badgeClass = 'bg-yellow-100 text-yellow-800 font-black rounded-full px-2 py-0.5';
+                        } else if (team.playCount > 0) {
+                            badgeClass = 'font-bold text-gray-800';
+                        }
+                        
+                        // 현재 경기 중인 팀은 초록색 점 표시
+                        const isPlaying = team.status === 'playing';
+                        const playingDot = isPlaying ? `<span class="inline-block w-1.5 h-1.5 rounded-full bg-green-500 ml-1 mb-0.5 shadow-sm"></span>` : '';
+
+                        return `<span class="${badgeClass}">${team.playCount}</span>${playingDot}`;
+                    };
+
+                    const row = `
+                        <tr class="hover:bg-gray-100 transition-colors">
+                            <td class="py-2.5 px-1 font-black text-gray-700 border-b border-r border-gray-200 bg-gray-50">${classId}반</td>
+                            <td class="py-2.5 px-1 border-b border-r border-gray-200">${getCountHtml(mATeam)}</td>
+                            <td class="py-2.5 px-1 border-b border-r border-gray-200">${getCountHtml(mBTeam)}</td>
+                            <td class="py-2.5 px-1 border-b border-r border-gray-200">${getCountHtml(fATeam)}</td>
+                            <td class="py-2.5 px-1 border-b border-gray-200">${getCountHtml(fBTeam)}</td>
+                        </tr>
+                    `;
+                    statsBody.insertAdjacentHTML('beforeend', row);
+                });
+            }
+
+        });
+    </script>
+</body>
+</html>
