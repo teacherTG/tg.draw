@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>빅발리볼 대진표 자동 생성기</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
@@ -17,6 +17,58 @@
             color: white;
             border-color: #3b82f6;
         }
+        #app > header {
+            flex-shrink: 0;
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto;
+            column-gap: 0.5rem;
+            align-items: center;
+        }
+        #app > header > p { grid-column: 1; }
+        #fullscreen-btn {
+            grid-column: 2;
+            grid-row: 1 / 3;
+            min-width: 44px;
+            min-height: 44px;
+            padding: 0.5rem;
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            border-radius: 0.75rem;
+            background: #4338ca;
+            color: white;
+            font: inherit;
+            font-size: 0.75rem;
+            cursor: pointer;
+        }
+        #fullscreen-btn:focus-visible { outline: 3px solid #facc15; outline-offset: 2px; }
+        body.app-fullscreen { overflow: hidden; }
+        #app.is-fullscreen {
+            position: fixed;
+            inset: 0;
+            width: 100%;
+            max-width: none;
+            height: 100vh;
+            height: 100dvh;
+            min-height: 0;
+            margin: 0;
+            padding: env(safe-area-inset-top) env(safe-area-inset-right)
+                env(safe-area-inset-bottom) env(safe-area-inset-left);
+            box-sizing: border-box;
+        }
+        #app.is-fullscreen > main {
+            min-height: 0;
+            overflow-y: auto;
+            overscroll-behavior: contain;
+        }
+        #app.is-fullscreen #setup-view > div { flex-shrink: 0; }
+        #app.is-fullscreen #main-view > div { flex-shrink: 0; }
+        .main-controls { flex-wrap: wrap; gap: 0.75rem; }
+        .main-controls > div { flex-wrap: wrap; }
+        #overall-modal > div { max-height: 90dvh; }
+        #reset-modal { position: fixed; padding: 1rem; overflow-y: auto; }
+        #reset-modal > div { max-height: 100%; overflow-y: auto; }
+        @media (min-width: 600px) {
+            #app.is-fullscreen #courts-container { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        }
     </style>
 </head>
 <body class="text-gray-800 antialiased min-h-screen">
@@ -25,8 +77,9 @@
         
         <!-- Header -->
         <header class="bg-indigo-600 text-white p-4 text-center shadow-md">
-            <h1 class="text-2xl font-black tracking-tight">🏐 빅발리볼 대진표</h1>
+            <h1 class="app-header-title text-2xl font-black tracking-tight">🏐 빅발리볼 대진표</h1>
             <p class="text-indigo-200 text-sm mt-1 font-medium">(15점 단판)</p>
+            <button id="fullscreen-btn" type="button" aria-label="전체화면 켜기" aria-pressed="false" title="전체화면 켜기">전체화면</button>
         </header>
 
         <main id="setup-view" class="flex-1 p-5 flex flex-col">
@@ -50,7 +103,7 @@
         <main id="main-view" class="flex-1 p-4 flex flex-col hidden overflow-y-auto bg-gray-100">
             
             <!-- Global Controls -->
-            <div class="flex justify-between items-center mb-4">
+            <div class="main-controls flex justify-between items-center mb-4">
                 <h2 class="text-xl font-black text-indigo-800 tracking-tight">🏐 코트별 경기 현황</h2>
                 <div class="flex gap-1.5 sm:gap-2">
                     <button id="view-overall-btn" class="text-xs bg-teal-600 hover:bg-teal-700 text-white py-2 px-2 sm:px-3 rounded-lg font-bold shadow transition active:scale-95">
@@ -135,6 +188,59 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
+            const app = document.getElementById('app');
+            const fullscreenBtn = document.getElementById('fullscreen-btn');
+            let nativeFullscreenActive = false;
+
+            function setFullscreen(enabled) {
+                app.classList.toggle('is-fullscreen', enabled);
+                document.body.classList.toggle('app-fullscreen', enabled);
+                fullscreenBtn.textContent = enabled ? '전체화면 해제' : '전체화면';
+                fullscreenBtn.setAttribute('aria-pressed', String(enabled));
+                fullscreenBtn.setAttribute('aria-label', enabled ? '전체화면 해제' : '전체화면 켜기');
+                fullscreenBtn.title = fullscreenBtn.getAttribute('aria-label');
+            }
+
+            function syncFullscreen() {
+                const activeElement = document.fullscreenElement || document.webkitFullscreenElement;
+                if (activeElement === app) {
+                    nativeFullscreenActive = true;
+                    setFullscreen(true);
+                } else if (nativeFullscreenActive) {
+                    nativeFullscreenActive = false;
+                    setFullscreen(false);
+                }
+            }
+
+            fullscreenBtn.addEventListener('click', async () => {
+                if (app.classList.contains('is-fullscreen')) {
+                    const exit = document.exitFullscreen || document.webkitExitFullscreen;
+                    if ((document.fullscreenElement || document.webkitFullscreenElement) && exit) {
+                        try { await exit.call(document); }
+                        catch { return; }
+                    }
+                    nativeFullscreenActive = false;
+                    setFullscreen(false);
+                } else {
+                    setFullscreen(true);
+                    const request = app.requestFullscreen || app.webkitRequestFullscreen;
+                    if (request) {
+                        try {
+                            await request.call(app);
+                            syncFullscreen();
+                        } catch {
+                            // Keep viewport-filling mode when browser fullscreen is unavailable.
+                        }
+                    }
+                }
+            });
+            document.addEventListener('fullscreenchange', syncFullscreen);
+            document.addEventListener('webkitfullscreenchange', syncFullscreen);
+            document.addEventListener('keydown', (event) => {
+                if (event.key === 'Escape' && !(document.fullscreenElement || document.webkitFullscreenElement)) {
+                    setFullscreen(false);
+                }
+            });
             
             // --- State ---
             let selectedClasses = [];
